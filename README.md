@@ -1,1 +1,1 @@
-https://https://polymerization.github.io
+https://Polymerization.github.io
