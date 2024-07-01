@@ -50,6 +50,9 @@
   var map = function(dict) {
     return dict.map;
   };
+  var $$void = function(dictFunctor) {
+    return map(dictFunctor)($$const(unit));
+  };
 
   // output/Control.Apply/index.js
   var identity2 = /* @__PURE__ */ identity(categoryFn);
@@ -117,6 +120,8 @@
   };
 
   // output/Data.Bounded/foreign.js
+  var topInt = 2147483647;
+  var bottomInt = -2147483648;
   var topChar = String.fromCharCode(65535);
   var bottomChar = String.fromCharCode(0);
   var topNumber = Number.POSITIVE_INFINITY;
@@ -134,6 +139,7 @@
       };
     };
   };
+  var ordIntImpl = unsafeCompareImpl;
   var ordNumberImpl = unsafeCompareImpl;
 
   // output/Data.Eq/foreign.js
@@ -142,11 +148,15 @@
       return r1 === r2;
     };
   };
+  var eqIntImpl = refEq;
   var eqNumberImpl = refEq;
 
   // output/Data.Eq/index.js
   var eqNumber = {
     eq: eqNumberImpl
+  };
+  var eqInt = {
+    eq: eqIntImpl
   };
 
   // output/Data.Ordering/index.js
@@ -172,12 +182,55 @@
     return EQ2;
   }();
 
+  // output/Data.Ring/foreign.js
+  var intSub = function(x) {
+    return function(y) {
+      return x - y | 0;
+    };
+  };
+
+  // output/Data.Semiring/foreign.js
+  var intAdd = function(x) {
+    return function(y) {
+      return x + y | 0;
+    };
+  };
+  var intMul = function(x) {
+    return function(y) {
+      return x * y | 0;
+    };
+  };
+
+  // output/Data.Semiring/index.js
+  var semiringInt = {
+    add: intAdd,
+    zero: 0,
+    mul: intMul,
+    one: 1
+  };
+
+  // output/Data.Ring/index.js
+  var ringInt = {
+    sub: intSub,
+    Semiring0: function() {
+      return semiringInt;
+    }
+  };
+
   // output/Data.Ord/index.js
   var ordNumber = /* @__PURE__ */ function() {
     return {
       compare: ordNumberImpl(LT.value)(EQ.value)(GT.value),
       Eq0: function() {
         return eqNumber;
+      }
+    };
+  }();
+  var ordInt = /* @__PURE__ */ function() {
+    return {
+      compare: ordIntImpl(LT.value)(EQ.value)(GT.value),
+      Eq0: function() {
+        return eqInt;
       }
     };
   }();
@@ -238,6 +291,21 @@
     };
   };
 
+  // output/Data.Bounded/index.js
+  var top = function(dict) {
+    return dict.top;
+  };
+  var boundedInt = {
+    top: topInt,
+    bottom: bottomInt,
+    Ord0: function() {
+      return ordInt;
+    }
+  };
+  var bottom = function(dict) {
+    return dict.bottom;
+  };
+
   // output/Data.Show/foreign.js
   var showIntImpl = function(n) {
     return n.toString();
@@ -289,6 +357,15 @@
   var fromMaybe = function(a) {
     return maybe(a)(identity3);
   };
+  var fromJust = function() {
+    return function(v) {
+      if (v instanceof Just) {
+        return v.value0;
+      }
+      ;
+      throw new Error("Failed pattern match at Data.Maybe (line 288, column 1 - line 288, column 46): " + [v.constructor.name]);
+    };
+  };
 
   // output/Data.HeytingAlgebra/foreign.js
   var boolConj = function(b1) {
@@ -328,10 +405,63 @@
     not: boolNot
   };
 
+  // output/Data.EuclideanRing/foreign.js
+  var intDegree = function(x) {
+    return Math.min(Math.abs(x), 2147483647);
+  };
+  var intDiv = function(x) {
+    return function(y) {
+      if (y === 0) return 0;
+      return y > 0 ? Math.floor(x / y) : -Math.floor(x / -y);
+    };
+  };
+  var intMod = function(x) {
+    return function(y) {
+      if (y === 0) return 0;
+      var yy = Math.abs(y);
+      return (x % yy + yy) % yy;
+    };
+  };
+
+  // output/Data.CommutativeRing/index.js
+  var commutativeRingInt = {
+    Ring0: function() {
+      return ringInt;
+    }
+  };
+
+  // output/Data.EuclideanRing/index.js
+  var mod = function(dict) {
+    return dict.mod;
+  };
+  var euclideanRingInt = {
+    degree: intDegree,
+    div: intDiv,
+    mod: intMod,
+    CommutativeRing0: function() {
+      return commutativeRingInt;
+    }
+  };
+
   // output/Data.Monoid/index.js
   var mempty = function(dict) {
     return dict.mempty;
   };
+
+  // output/Data.Tuple/index.js
+  var Tuple = /* @__PURE__ */ function() {
+    function Tuple2(value0, value1) {
+      this.value0 = value0;
+      this.value1 = value1;
+    }
+    ;
+    Tuple2.create = function(value0) {
+      return function(value1) {
+        return new Tuple2(value0, value1);
+      };
+    };
+    return Tuple2;
+  }();
 
   // output/Data.Monoid.Disj/index.js
   var Disj = function(x) {
@@ -433,8 +563,53 @@
   };
 
   // output/Data.Int/foreign.js
+  var fromNumberImpl = function(just) {
+    return function(nothing) {
+      return function(n) {
+        return (n | 0) === n ? just(n) : nothing;
+      };
+    };
+  };
   var toNumber = function(n) {
     return n;
+  };
+
+  // output/Data.Number/foreign.js
+  var isFiniteImpl = isFinite;
+  var remainder = function(n) {
+    return function(m) {
+      return n % m;
+    };
+  };
+  var round = Math.round;
+
+  // output/Data.Int/index.js
+  var top2 = /* @__PURE__ */ top(boundedInt);
+  var bottom2 = /* @__PURE__ */ bottom(boundedInt);
+  var fromNumber = /* @__PURE__ */ function() {
+    return fromNumberImpl(Just.create)(Nothing.value);
+  }();
+  var unsafeClamp = function(x) {
+    if (!isFiniteImpl(x)) {
+      return 0;
+    }
+    ;
+    if (x >= toNumber(top2)) {
+      return top2;
+    }
+    ;
+    if (x <= toNumber(bottom2)) {
+      return bottom2;
+    }
+    ;
+    if (otherwise) {
+      return fromMaybe(0)(fromNumber(x));
+    }
+    ;
+    throw new Error("Failed pattern match at Data.Int (line 72, column 1 - line 72, column 29): " + [x.constructor.name]);
+  };
+  var round2 = function($37) {
+    return unsafeClamp(round($37));
   };
 
   // output/Control.Monad/index.js
@@ -772,6 +947,19 @@
     return throwException(error($4));
   };
 
+  // output/Effect.Unsafe/foreign.js
+  var unsafePerformEffect = function(f) {
+    return f();
+  };
+
+  // output/Effect.Exception.Unsafe/index.js
+  var unsafeThrowException = function($1) {
+    return unsafePerformEffect(throwException($1));
+  };
+  var unsafeThrow = function($2) {
+    return unsafeThrowException(error($2));
+  };
+
   // output/Graphics.Canvas/foreign.js
   function getCanvasElementByIdImpl(id, Just2, Nothing2) {
     return function() {
@@ -885,6 +1073,242 @@
         return a;
       };
     };
+  };
+
+  // output/Random.LCG/index.js
+  var mod2 = /* @__PURE__ */ mod(euclideanRingInt);
+  var fromJust2 = /* @__PURE__ */ fromJust();
+  var unSeed = function(v) {
+    return v;
+  };
+  var seedMin = 1;
+  var lcgM = 2147483647;
+  var seedMax = /* @__PURE__ */ function() {
+    return lcgM - 1 | 0;
+  }();
+  var mkSeed = function(x) {
+    var ensureBetween = function(min3) {
+      return function(max3) {
+        return function(n) {
+          var rangeSize = max3 - min3 | 0;
+          var n$prime = mod2(n)(rangeSize);
+          var $25 = n$prime < min3;
+          if ($25) {
+            return n$prime + max3 | 0;
+          }
+          ;
+          return n$prime;
+        };
+      };
+    };
+    return ensureBetween(seedMin)(seedMax)(x);
+  };
+  var lcgC = 0;
+  var lcgA = 48271;
+  var lcgPerturb = function(d) {
+    return function(v) {
+      return fromJust2(fromNumber(remainder(toNumber(lcgA) * toNumber(v) + toNumber(d))(toNumber(lcgM))));
+    };
+  };
+  var lcgNext = /* @__PURE__ */ lcgPerturb(lcgC);
+
+  // output/Control.Monad.ST.Internal/foreign.js
+  var map_ = function(f) {
+    return function(a) {
+      return function() {
+        return f(a());
+      };
+    };
+  };
+  function forST(lo) {
+    return function(hi) {
+      return function(f) {
+        return function() {
+          for (var i = lo; i < hi; i++) {
+            f(i)();
+          }
+        };
+      };
+    };
+  }
+  function newSTRef(val) {
+    return function() {
+      return { value: val };
+    };
+  }
+  var read2 = function(ref) {
+    return function() {
+      return ref.value;
+    };
+  };
+  var write2 = function(a) {
+    return function(ref) {
+      return function() {
+        return ref.value = a;
+      };
+    };
+  };
+
+  // output/Control.Monad.ST.Internal/index.js
+  var functorST = {
+    map: map_
+  };
+
+  // output/Data.Array.ST/foreign.js
+  function unsafeFreezeThawImpl(xs) {
+    return xs;
+  }
+  var unsafeFreezeImpl = unsafeFreezeThawImpl;
+  function copyImpl(xs) {
+    return xs.slice();
+  }
+  var thawImpl = copyImpl;
+  var pushImpl = function(a, xs) {
+    return xs.push(a);
+  };
+
+  // output/Control.Monad.ST.Uncurried/foreign.js
+  var runSTFn1 = function runSTFn12(fn) {
+    return function(a) {
+      return function() {
+        return fn(a);
+      };
+    };
+  };
+  var runSTFn2 = function runSTFn22(fn) {
+    return function(a) {
+      return function(b) {
+        return function() {
+          return fn(a, b);
+        };
+      };
+    };
+  };
+
+  // output/Data.Array.ST/index.js
+  var unsafeFreeze = /* @__PURE__ */ runSTFn1(unsafeFreezeImpl);
+  var thaw = /* @__PURE__ */ runSTFn1(thawImpl);
+  var withArray = function(f) {
+    return function(xs) {
+      return function __do6() {
+        var result = thaw(xs)();
+        f(result)();
+        return unsafeFreeze(result)();
+      };
+    };
+  };
+  var push = /* @__PURE__ */ runSTFn2(pushImpl);
+
+  // output/Random.PseudoRandom/index.js
+  var $$void2 = /* @__PURE__ */ $$void(functorST);
+  var mod3 = /* @__PURE__ */ mod(euclideanRingInt);
+  var randomsF = function(dictRandom) {
+    return function(f) {
+      return function(i) {
+        return function(seed) {
+          var fill2 = function(arr) {
+            return function __do6() {
+              var seedref = newSTRef(seed)();
+              return forST(0)(i)(function(v) {
+                return function __do7() {
+                  var seed$prime = read2(seedref)();
+                  var rp = f(seed$prime);
+                  $$void2(write2(rp.newSeed)(seedref))();
+                  return $$void2(push(rp.newVal)(arr))();
+                };
+              })();
+            };
+          };
+          return withArray(fill2)([])();
+        };
+      };
+    };
+  };
+  var randomR = function(dict) {
+    return dict.randomR;
+  };
+  var randomRs = function(dictRandomR) {
+    var randomsF1 = randomsF(dictRandomR.Random0());
+    var randomR2 = randomR(dictRandomR);
+    return function(min3) {
+      return function(max3) {
+        return randomsF1(randomR2(min3)(max3));
+      };
+    };
+  };
+  var randomInt2 = {
+    random: function(seed) {
+      var newSeed = lcgNext(seed);
+      return {
+        newVal: unSeed(newSeed),
+        newSeed
+      };
+    }
+  };
+  var random2 = function(dict) {
+    return dict.random;
+  };
+  var random1 = /* @__PURE__ */ random2(randomInt2);
+  var randomNumber = {
+    random: function(seed) {
+      var intRp = random1(seed);
+      var newVal = toNumber(intRp.newVal) / toNumber(lcgM);
+      return {
+        newVal,
+        newSeed: intRp.newSeed
+      };
+    }
+  };
+  var random22 = /* @__PURE__ */ random2(randomNumber);
+  var randomRInt = {
+    randomR: function(min3) {
+      return function(max3) {
+        return function(seed) {
+          if (min3 > max3) {
+            return randomR(randomRInt)(max3)(min3)(seed);
+          }
+          ;
+          if (otherwise) {
+            var rp = random1(seed);
+            var newVal = mod3(rp.newVal)((max3 - min3 | 0) + 1 | 0) + min3 | 0;
+            return {
+              newVal,
+              newSeed: rp.newSeed
+            };
+          }
+          ;
+          throw new Error("Failed pattern match at Random.PseudoRandom (line 60, column 1 - line 66, column 55): " + [min3.constructor.name, max3.constructor.name, seed.constructor.name]);
+        };
+      };
+    },
+    Random0: function() {
+      return randomInt2;
+    }
+  };
+  var randomRNumber = {
+    randomR: function(min3) {
+      return function(max3) {
+        return function(seed) {
+          if (min3 > max3) {
+            return randomR(randomRNumber)(max3)(min3)(seed);
+          }
+          ;
+          if (otherwise) {
+            var rp = random22(seed);
+            var newVal = rp.newVal * (max3 - min3) + min3;
+            return {
+              newVal,
+              newSeed: rp.newSeed
+            };
+          }
+          ;
+          throw new Error("Failed pattern match at Random.PseudoRandom (line 68, column 1 - line 74, column 47): " + [min3.constructor.name, max3.constructor.name, seed.constructor.name]);
+        };
+      };
+    },
+    Random0: function() {
+      return randomNumber;
+    }
   };
 
   // output/Signal/foreign.js
@@ -1159,11 +1583,13 @@
   // output/Main/index.js
   var bind2 = /* @__PURE__ */ bind(bindEffect);
   var pure2 = /* @__PURE__ */ pure(applicativeEffect);
+  var randomRs2 = /* @__PURE__ */ randomRs(randomRNumber);
   var clamp2 = /* @__PURE__ */ clamp(ordNumber);
   var show2 = /* @__PURE__ */ show(showInt);
   var traverse_2 = /* @__PURE__ */ traverse_(applicativeEffect)(foldableList);
   var any2 = /* @__PURE__ */ any(foldableArray)(heytingAlgebraBoolean);
   var map3 = /* @__PURE__ */ map(functorList);
+  var randomRs1 = /* @__PURE__ */ randomRs(randomRInt);
   var any1 = /* @__PURE__ */ any(foldableList)(heytingAlgebraBoolean);
   var foldr2 = /* @__PURE__ */ foldr(foldableList);
   var compose2 = /* @__PURE__ */ compose(semigroupoidFn);
@@ -1224,12 +1650,20 @@
     })(Jump.value)(jump);
   };
   var spawnBlocks = function(time) {
-    return function(v) {
+    return function(randSeed) {
       return function(s) {
-        var $41 = time > s.nextBlockTime;
-        if ($41) {
+        var $50 = time > s.nextBlockTime;
+        if ($50) {
+          var randHeight = function() {
+            var v = randomRs2(0)(600)(2)(randSeed);
+            if (v.length === 2) {
+              return v[1];
+            }
+            ;
+            return unsafeThrow("unreachable");
+          }();
           var h2 = s.rules.gap / 2;
-          var y = clamp2(h2)(600 - h2)(300);
+          var y = clamp2(h2)(600 - h2)(randHeight);
           var blocks$prime = new Cons({
             x: 840,
             y,
@@ -1242,6 +1676,8 @@
             velocity: s.velocity,
             rules: s.rules,
             score: s.score,
+            nextChallengeTime: s.nextChallengeTime,
+            debug: s.debug,
             blocks: blocks$prime,
             nextBlockTime: time + s.rules.rate
           };
@@ -1309,6 +1745,9 @@
           y: 0
         })(0)("white");
       };
+      var drawDebug = function(s) {
+        return pure2(unit);
+      };
       var drawBlock = function(b) {
         var w2 = 80 / 2;
         var h2 = b.height / 2;
@@ -1340,15 +1779,24 @@
         var w2 = 80 / 2;
         var rotDeg = s.velocity * 3;
         var h2 = 50 / 2;
-        return drawRectangle({
-          x: s.x - w2,
-          y: s.y - h2,
-          width: 80,
-          height: 50
-        })({
-          x: s.x,
-          y: s.y
-        })(rotDeg)("yellow");
+        return function __do6() {
+          drawRectangle({
+            x: s.x - w2,
+            y: s.y - h2,
+            width: 80,
+            height: 50
+          })({
+            x: s.x,
+            y: s.y
+          })(rotDeg)("yellow")();
+          return drawText("brib")({
+            x: s.x - w2 + 5,
+            y: s.y + h2 - 10
+          })(30)({
+            x: s.x,
+            y: s.y
+          })(rotDeg)("blue")();
+        };
       };
       return function __do6() {
         clearRect(ctx)({
@@ -1379,13 +1827,15 @@
         if (model instanceof Alive) {
           drawBird(model.value0)();
           drawBlocks(model.value0)();
-          return drawScore(model.value0)();
+          drawScore(model.value0)();
+          return drawDebug(model.value0)();
         }
         ;
         if (model instanceof Dead) {
           drawBird(model.value0)();
           drawBlocks(model.value0)();
           drawScore(model.value0)();
+          drawDebug(model.value0)();
           return drawText("YOU ARE DEAD")({
             x: 100,
             y: 270
@@ -1395,7 +1845,7 @@
           })(0)("red")();
         }
         ;
-        throw new Error("Failed pattern match at Main (line 201, column 3 - line 213, column 85): " + [model.constructor.name]);
+        throw new Error("Failed pattern match at Main (line 257, column 3 - line 271, column 85): " + [model.constructor.name]);
       };
     };
   };
@@ -1428,6 +1878,8 @@
       rules: s.rules,
       nextBlockTime: s.nextBlockTime,
       score: s.score,
+      nextChallengeTime: s.nextChallengeTime,
+      debug: s.debug,
       blocks: blocks$prime
     };
   };
@@ -1451,6 +1903,78 @@
       return Nothing.value;
     })(Jump.value)(jump);
   };
+  var initDebug = {
+    seedInt: 0,
+    randGen: []
+  };
+  var increaseChallenge = function(currentTime) {
+    return function(randSeed) {
+      return function(s) {
+        var $59 = s.nextChallengeTime < currentTime;
+        if ($59) {
+          var pickOne = function() {
+            var v2 = randomRs1(1)(3)(2)(randSeed);
+            if (v2.length === 2) {
+              return v2[1];
+            }
+            ;
+            return unsafeThrow("unreachable");
+          }();
+          var v = function() {
+            var v1 = randomRs2(0)(1)(5)(randSeed);
+            if (v1.length === 5) {
+              return new Tuple(v1[1], new Tuple(v1[2], new Tuple(v1[3], v1[4])));
+            }
+            ;
+            return unsafeThrow("unreachable");
+          }();
+          var speed$prime = function() {
+            var $70 = pickOne === 1;
+            if ($70) {
+              return s.rules.speed + clamp2(0)(4)(v.value1.value0 + 2);
+            }
+            ;
+            return s.rules.speed;
+          }();
+          var rate$prime = function() {
+            var $71 = pickOne === 2;
+            if ($71) {
+              return s.rules.rate - clamp2(0)(1e3)(v.value1.value1.value0 * 1e3 * 0.5 + 500);
+            }
+            ;
+            return s.rules.rate;
+          }();
+          var nextTime = currentTime + clamp2(0)(1e4)(v.value0 * 1e3 * 2 + 5e3);
+          var gap$prime = function() {
+            var $72 = pickOne === 3;
+            if ($72) {
+              return s.rules.gap - clamp2(0)(100)(v.value1.value1.value1 * 25 + 50);
+            }
+            ;
+            return s.rules.gap;
+          }();
+          var rules$prime = {
+            speed: speed$prime,
+            rate: rate$prime,
+            gap: gap$prime
+          };
+          return {
+            x: s.x,
+            y: s.y,
+            velocity: s.velocity,
+            blocks: s.blocks,
+            nextBlockTime: s.nextBlockTime,
+            score: s.score,
+            debug: s.debug,
+            nextChallengeTime: nextTime,
+            rules: rules$prime
+          };
+        }
+        ;
+        return s;
+      };
+    };
+  };
   var gravity = function(s) {
     var velocity$prime = s.velocity + 0.4;
     var y$prime = s.y + velocity$prime;
@@ -1460,6 +1984,8 @@
       rules: s.rules,
       nextBlockTime: s.nextBlockTime,
       score: s.score,
+      nextChallengeTime: s.nextChallengeTime,
+      debug: s.debug,
       velocity: velocity$prime,
       y: y$prime
     };
@@ -1477,7 +2003,9 @@
       blocks: Nil.value,
       rules: fixedRules,
       nextBlockTime: 0,
-      score: 0
+      score: 0,
+      nextChallengeTime: 6e3,
+      debug: initDebug
     };
   }();
   var collideBlock = function(s) {
@@ -1509,8 +2037,8 @@
     };
     var score$prime = s.score + length(filter(collectable)(s.blocks)) | 0;
     var blocks$prime = map3(function(b) {
-      var $47 = collectable(b);
-      if ($47) {
+      var $79 = collectable(b);
+      if ($79) {
         return {
           height: b.height,
           x: b.x,
@@ -1527,6 +2055,8 @@
       velocity: s.velocity,
       rules: s.rules,
       nextBlockTime: s.nextBlockTime,
+      nextChallengeTime: s.nextChallengeTime,
+      debug: s.debug,
       score: score$prime,
       blocks: blocks$prime
     };
@@ -1543,13 +2073,35 @@
       rules: s.rules,
       nextBlockTime: s.nextBlockTime,
       score: s.score,
+      nextChallengeTime: s.nextChallengeTime,
+      debug: s.debug,
       blocks: blocks$prime
+    };
+  };
+  var captureDebug = function(seedInt) {
+    return function(randGen) {
+      return function(s) {
+        return {
+          x: s.x,
+          y: s.y,
+          velocity: s.velocity,
+          blocks: s.blocks,
+          rules: s.rules,
+          nextBlockTime: s.nextBlockTime,
+          score: s.score,
+          nextChallengeTime: s.nextChallengeTime,
+          debug: {
+            seedInt,
+            randGen
+          }
+        };
+      };
     };
   };
   var update = function(v) {
     return function(v1) {
       if (v instanceof Tick && v1 instanceof Alive) {
-        var updates = foldr2(compose2)(gravity)(new Cons(moveBlocks, new Cons(cleanupBlocks, new Cons(spawnBlocks(v.value0)(unit), new Cons(collectScore, Nil.value)))));
+        var updates = foldr2(compose2)(gravity)(new Cons(moveBlocks, new Cons(cleanupBlocks, new Cons(spawnBlocks(v.value0)(mkSeed(round2(v.value0))), new Cons(collectScore, new Cons(increaseChallenge(v.value0)(mkSeed(round2(v.value0))), new Cons(captureDebug(round2(v.value0))(randomRs2(0)(600)(2)(mkSeed(round2(v.value0)))), Nil.value)))))));
         var s$prime = updates(v1.value0);
         var dieConditions = [outOfBounds, collideBlock];
         var died = any2(function(f) {
@@ -1578,6 +2130,8 @@
           rules: v1.value0.rules,
           nextBlockTime: v1.value0.nextBlockTime,
           score: v1.value0.score,
+          nextChallengeTime: v1.value0.nextChallengeTime,
+          debug: v1.value0.debug,
           velocity: -11
         });
       }
@@ -1587,10 +2141,20 @@
       }
       ;
       if (v instanceof Jump && v1 instanceof Dead) {
-        return new Alive(restartGame);
+        return new Alive({
+          x: restartGame.x,
+          y: restartGame.y,
+          velocity: restartGame.velocity,
+          blocks: restartGame.blocks,
+          rules: restartGame.rules,
+          nextBlockTime: restartGame.nextBlockTime,
+          score: restartGame.score,
+          debug: restartGame.debug,
+          nextChallengeTime: v1.value0.nextChallengeTime
+        });
       }
       ;
-      throw new Error("Failed pattern match at Main (line 71, column 1 - line 71, column 35): " + [v.constructor.name, v1.constructor.name]);
+      throw new Error("Failed pattern match at Main (line 88, column 1 - line 88, column 35): " + [v.constructor.name, v1.constructor.name]);
     };
   };
   var main = function __do5() {
@@ -1602,7 +2166,7 @@
     var updateTickSig = map1(function(t) {
       return new Tick(t);
     })(every(toNumber(16)));
-    var allSigs = append1(updateTickSig)(append1(jumpSig)(append1(mouseSig)(tapSig)));
+    var allSigs = append1(updateTickSig)(append1(jumpSig)(mouseSig));
     var modelSig = foldp(update)(Title.value)(allSigs);
     var renderEff = sampleOn(animSig)(map1(render(ctx))(modelSig));
     return runSignal(renderEff)();
