@@ -1,0 +1,17 @@
+
+body {
+	background-color: #ffffffff;
+	color: #000000;
+}
+/* hyperlinks */
+a {
+	color: #0000ff;
+}
+/* content */
+article {
+	max-width: 75ch;
+}
+article img {
+	max-width: 100%;
+	height: auto;
+}
